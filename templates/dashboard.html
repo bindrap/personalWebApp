@@ -1,0 +1,222 @@
+<!-- templates/dashboard.html -->
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Finance Tracker{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1><i class="fas fa-chart-line"></i> Dashboard</h1>
+        <p class="text-muted">Overview of your finances and activities</p>
+    </div>
+</div>
+
+<!-- Budget Overview -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5><i class="fas fa-piggy-bank"></i> Current Budget Period</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Period:</strong> {{ budget_period.start_date }} to {{ budget_period.end_date }}</p>
+                <p><strong>Budget:</strong> ${{ "%.2f"|format(budget_period.budget_amount) }}</p>
+                <p><strong>Spent:</strong> ${{ "%.2f"|format(total_spent) }}</p>
+                <p><strong>Remaining:</strong> ${{ "%.2f"|format(remaining_budget) }}</p>
+                <p><strong>Days Left:</strong> {{ days_left }}</p>
+                <p><strong>Daily Spend Limit:</strong> ${{ "%.2f"|format(daily_spend_limit) }}</p>
+
+                {% set bar_class =
+                    'bg-danger' if total_spent > budget_period.budget_amount
+                    else 'bg-warning' if total_spent > budget_period.budget_amount * 0.8
+                    else 'bg-success'
+                %}
+                
+                <div class="progress budget-progress mt-3">
+                    <div class="progress-bar {{ bar_class }}"
+                         style="width: {{ ((total_spent / budget_period.budget_amount) * 100)|round(1) }}%">
+                        {{ ((total_spent / budget_period.budget_amount) * 100)|round(1) }}%
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5><i class="fas fa-chart-pie"></i> Spending by Category</h5>
+            </div>
+            <div class="card-body">
+                {% for category in spending_by_category %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span>{{ category.category }}</span>
+                    <span class="badge bg-secondary">${{ "%.2f"|format(category.total) }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Activity Stats -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5><i class="fas fa-running"></i> Activity Stats (Last 30 Days)</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-2 col-6">
+                        <div class="stat-card">
+                            <div class="stat-number text-primary">{{ activity_stats.gym_count or 0 }}</div>
+                            <div>Gym Sessions</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 col-6">
+                        <div class="stat-card">
+                            <div class="stat-number text-danger">{{ activity_stats.jiu_jitsu_count or 0 }}</div>
+                            <div>Jiu Jitsu</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 col-6">
+                        <div class="stat-card">
+                            <div class="stat-number text-warning">{{ activity_stats.skateboarding_count or 0 }}</div>
+                            <div>Skateboarding</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 col-6">
+                        <div class="stat-card">
+                            <div class="stat-number text-success">{{ activity_stats.work_count or 0 }}</div>
+                            <div>Work Days</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 col-6">
+                        <div class="stat-card">
+                            <div class="stat-number text-info">{{ activity_stats.sauna_count or 0 }}</div>
+                            <div>Sauna</div>
+                        </div>
+                    </div>
+                    <div class="col-md-2 col-6">
+                        <div class="stat-card">
+                            <div class="stat-number text-dark">{{ activity_stats.supplements_count or 0 }}</div>
+                            <div>Supplements</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-line"></i> Daily Spending (Last 30 Days)</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="spendingChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar"></i> Activity Frequency</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="activityChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Fetch analytics data and create charts
+fetch('/api/analytics')
+    .then(response => response.json())
+    .then(data => {
+        // Spending Chart
+        const spendingCtx = document.getElementById('spendingChart').getContext('2d');
+        const spendingDates = data.daily_spending.map(item => item.date);
+        const spendingAmounts = data.daily_spending.map(item => item.total);
+        
+        new Chart(spendingCtx, {
+            type: 'line',
+            data: {
+                labels: spendingDates,
+                datasets: [{
+                    label: 'Daily Spending',
+                    data: spendingAmounts,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toFixed(2);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Activity Chart
+        const activityCtx = document.getElementById('activityChart').getContext('2d');
+        const activities = ['gym', 'jiu_jitsu', 'skateboarding', 'work', 'sauna', 'supplements'];
+        const activityCounts = activities.map(activity => {
+            return data.daily_activities.reduce((sum, day) => sum + (day[activity] || 0), 0);
+        });
+        
+        new Chart(activityCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Gym', 'Jiu Jitsu', 'Skateboarding', 'Work', 'Sauna', 'Supplements'],
+                datasets: [{
+                    label: 'Activity Count',
+                    data: activityCounts,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 205, 86, 0.2)',
+                        'rgba(75, 192, 192, 0.2)',
+                        'rgba(153, 102, 255, 0.2)',
+                        'rgba(255, 159, 64, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 205, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

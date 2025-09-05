@@ -1,0 +1,159 @@
+<!-- templates/personal.html -->
+{% extends "base.html" %}
+
+{% block title %}Personal Activities - Finance Tracker{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1><i class="fas fa-user"></i> Personal Activities</h1>
+        <p class="text-muted">Track your daily activities</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5><i class="fas fa-plus"></i> Log Activities</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('save_personal') }}">
+                    <div class="mb-3">
+                        <label for="date" class="form-label">Date</label>
+                        <input type="date" class="form-control" id="date" name="date" 
+                               value="{{ today }}" required>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="activity-toggle">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" name="gym" 
+                                           {% if today_data and today_data.gym %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="ms-2">💪 Gym</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="activity-toggle">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" name="jiu_jitsu" 
+                                           {% if today_data and today_data.jiu_jitsu %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="ms-2">🥋 Jiu Jitsu</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="activity-toggle">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" name="skateboarding" 
+                                           {% if today_data and today_data.skateboarding %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="ms-2">🛹 Skateboarding</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="activity-toggle">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" name="work" 
+                                           {% if today_data and today_data.work %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="ms-2">💼 Work</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="activity-toggle">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" name="coitus" 
+                                           {% if today_data and today_data.coitus %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="ms-2">❤️ Coitus</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="activity-toggle">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" name="sauna" 
+                                           {% if today_data and today_data.sauna %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="ms-2">🧖‍♂️ Sauna</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="activity-toggle">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" name="supplements" 
+                                           {% if today_data and today_data.supplements %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="ms-2">💊 Supplements</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                  placeholder="Any additional notes...">{% if today_data %}{{ today_data.notes }}{% endif %}</textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Activities
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5><i class="fas fa-history"></i> Recent Entries</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_entries %}
+                    {% for entry in recent_entries %}
+                    <div class="border-bottom pb-2 mb-2">
+                        <div class="d-flex justify-content-between">
+                            <strong>{{ entry.date }}</strong>
+                        </div>
+                        <div class="mt-1">
+                            {% if entry.gym %}<span class="badge bg-primary me-1">💪 Gym</span>{% endif %}
+                            {% if entry.jiu_jitsu %}<span class="badge bg-danger me-1">🥋 Jiu Jitsu</span>{% endif %}
+                            {% if entry.skateboarding %}<span class="badge bg-warning me-1">🛹 Skateboarding</span>{% endif %}
+                            {% if entry.work %}<span class="badge bg-success me-1">💼 Work</span>{% endif %}
+                            {% if entry.coitus %}<span class="badge bg-info me-1">❤️ Coitus</span>{% endif %}
+                            {% if entry.sauna %}<span class="badge bg-secondary me-1">🧖‍♂️ Sauna</span>{% endif %}
+                            {% if entry.supplements %}<span class="badge bg-dark me-1">💊 Supplements</span>{% endif %}
+                        </div>
+                        {% if entry.notes %}
+                        <div class="mt-1 text-muted small">
+                            {{ entry.notes }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No entries yet. Start logging your activities!</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
