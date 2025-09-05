@@ -147,6 +147,36 @@ def dashboard():
     
     activity_stats = cursor.fetchone()
     
+    # Get ALL-TIME activity percentages
+    cursor.execute('''
+        SELECT 
+            SUM(gym) as total_gym,
+            SUM(jiu_jitsu) as total_jiu_jitsu,
+            SUM(skateboarding) as total_skateboarding,
+            SUM(work) as total_work,
+            SUM(coitus) as total_coitus,
+            SUM(sauna) as total_sauna,
+            SUM(supplements) as total_supplements,
+            COUNT(*) as total_all_days
+        FROM personal_log
+    ''')
+    
+    all_time_stats = cursor.fetchone()
+    
+    # Calculate percentages (avoid division by zero)
+    total_days = all_time_stats['total_all_days'] if all_time_stats['total_all_days'] else 1
+    
+    activity_percentages = {
+        'gym_percentage': round((all_time_stats['total_gym'] / total_days) * 100, 1) if all_time_stats['total_gym'] else 0,
+        'jiu_jitsu_percentage': round((all_time_stats['total_jiu_jitsu'] / total_days) * 100, 1) if all_time_stats['total_jiu_jitsu'] else 0,
+        'skateboarding_percentage': round((all_time_stats['total_skateboarding'] / total_days) * 100, 1) if all_time_stats['total_skateboarding'] else 0,
+        'work_percentage': round((all_time_stats['total_work'] / total_days) * 100, 1) if all_time_stats['total_work'] else 0,
+        'coitus_percentage': round((all_time_stats['total_coitus'] / total_days) * 100, 1) if all_time_stats['total_coitus'] else 0,
+        'sauna_percentage': round((all_time_stats['total_sauna'] / total_days) * 100, 1) if all_time_stats['total_sauna'] else 0,
+        'supplements_percentage': round((all_time_stats['total_supplements'] / total_days) * 100, 1) if all_time_stats['total_supplements'] else 0,
+        'total_tracked_days': total_days
+    }
+    
     # Get recent spending by category
     cursor.execute('''
         SELECT 
@@ -175,6 +205,7 @@ def dashboard():
                          days_left=days_left,
                          daily_spend_limit=daily_spend_limit,
                          activity_stats=activity_stats,
+                         activity_percentages=activity_percentages,
                          spending_by_category=spending_by_category)
 
 @app.route('/personal')
@@ -329,36 +360,54 @@ def delete_spending(entry_id):
 
 @app.route('/api/analytics')
 def api_analytics():
-    """API endpoint for analytics data"""
+    """API endpoint for analytics data - FIXED to show actual last 30 days"""
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # Get last 30 days of data for charts
-    thirty_days_ago = datetime.now().date() - timedelta(days=30)
+    # Calculate the actual last 30 days from today
+    today = datetime.now().date()
+    thirty_days_ago = today - timedelta(days=29)  # Include today, so 30 days total
     
-    # Daily spending over last 30 days
+    print(f"Analytics: Getting data from {thirty_days_ago} to {today}")
+    
+    # Daily spending over last 30 days - FIXED with proper date filtering
     cursor.execute('''
         SELECT date, SUM(price) as total
         FROM spending_log 
-        WHERE date >= ?
+        WHERE date >= ? AND date <= ?
         GROUP BY date
         ORDER BY date
-    ''', (thirty_days_ago,))
+    ''', (thirty_days_ago, today))
     daily_spending = [dict(row) for row in cursor.fetchall()]
     
-    # Activity frequency over last 30 days
+    # Fill in missing days with 0 spending
+    complete_spending = []
+    current_date = thirty_days_ago
+    spending_dict = {row['date']: row['total'] for row in daily_spending}
+    
+    while current_date <= today:
+        date_str = current_date.strftime('%Y-%m-%d')
+        complete_spending.append({
+            'date': date_str,
+            'total': spending_dict.get(date_str, 0)
+        })
+        current_date += timedelta(days=1)
+    
+    # Activity frequency over last 30 days - FIXED with proper date filtering
     cursor.execute('''
         SELECT date, gym, jiu_jitsu, skateboarding, work, coitus, sauna, supplements
         FROM personal_log 
-        WHERE date >= ?
+        WHERE date >= ? AND date <= ?
         ORDER BY date
-    ''', (thirty_days_ago,))
+    ''', (thirty_days_ago, today))
     daily_activities = [dict(row) for row in cursor.fetchall()]
     
     conn.close()
     
+    print(f"Analytics: Found {len(complete_spending)} spending days, {len(daily_activities)} activity days")
+    
     return jsonify({
-        'daily_spending': daily_spending,
+        'daily_spending': complete_spending,
         'daily_activities': daily_activities
     })
 
